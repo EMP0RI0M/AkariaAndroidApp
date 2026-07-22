@@ -21,6 +21,9 @@ import android.widget.TextView
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.util.Log
+import android.widget.Toast
+import android.os.Handler
+import android.os.Looper
 import androidx.core.app.NotificationCompat
 import java.io.File
 import java.security.MessageDigest
@@ -39,17 +42,24 @@ class ScreenCaptureService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val resultCode = intent?.getIntExtra("RESULT_CODE", 0) ?: 0
-        val data = intent?.getParcelableExtra<Intent>("DATA")
+        try {
+            val resultCode = intent?.getIntExtra("RESULT_CODE", 0) ?: 0
+            val data = intent?.getParcelableExtra<Intent>("DATA")
 
-        if (resultCode != 0 && data != null) {
-            startForeground()
-            startCapture(resultCode, data)
+            if (resultCode != 0 && data != null) {
+                startForegroundNotification()
+                startCapture(resultCode, data)
+            }
+        } catch (e: Exception) {
+            Log.e("Akaria", "Crash in onStartCommand", e)
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(this, "Crash: ${e.message}", Toast.LENGTH_LONG).show()
+            }
         }
         return START_NOT_STICKY
     }
 
-    private fun startForeground() {
+    private fun startForegroundNotification() {
         val channelId = "AkariaServiceChannel"
         val channel = NotificationChannel(channelId, "Akaria Capture Service", NotificationManager.IMPORTANCE_LOW)
         val manager = getSystemService(NotificationManager::class.java)
@@ -95,51 +105,65 @@ class ScreenCaptureService : Service() {
     }
 
     private fun showFloatingIcon() {
-        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        
-        val tv = TextView(this).apply {
-            text = "👁 Akaria"
-            textSize = 14f
-            setBackgroundColor(Color.parseColor("#99000000")) // Semi-transparent black
-            setPadding(30, 20, 30, 20)
-            setTextColor(Color.WHITE)
+        try {
+            windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+            
+            val tv = TextView(this).apply {
+                text = "👁 Akaria"
+                textSize = 14f
+                setBackgroundColor(Color.parseColor("#99000000")) // Semi-transparent black
+                setPadding(30, 20, 30, 20)
+                setTextColor(Color.WHITE)
+            }
+            floatingView = tv
+            
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                PixelFormat.TRANSLUCENT
+            )
+            params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            params.y = 100 // Slightly below the top edge
+            
+            windowManager?.addView(floatingView, params)
+        } catch (e: Exception) {
+            Log.e("Akaria", "Crash in showFloatingIcon", e)
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(this, "Orb Crash: ${e.message}", Toast.LENGTH_LONG).show()
+            }
         }
-        floatingView = tv
-        
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-            PixelFormat.TRANSLUCENT
-        )
-        params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-        params.y = 100 // Slightly below the top edge
-        
-        windowManager?.addView(floatingView, params)
     }
 
     private val captureRunnable = object : Runnable {
         override fun run() {
-            val image = imageReader?.acquireLatestImage()
-            if (image != null) {
-                val planes = image.planes
-                val buffer = planes[0].buffer
-                val currentHash = computeHash(buffer)
-                
-                if (currentHash != lastFrameHash) {
-                    lastFrameHash = currentHash
-                    Log.i("Akaria", "New frame detected! Hash: $currentHash. Sending to Backend...")
+            try {
+                val image = imageReader?.acquireLatestImage()
+                if (image != null) {
+                    val planes = image.planes
+                    val buffer = planes[0].buffer
+                    val currentHash = computeHash(buffer)
                     
-                    // Mock sending to backend
-                    ApiService.sendStepToBackend(File(""), "<hierarchy/>", "Auto-goal") { action, x, y ->
-                        Log.i("Akaria", "Received Action: $action at ($x, $y)")
+                    if (currentHash != lastFrameHash) {
+                        lastFrameHash = currentHash
+                        Log.i("Akaria", "New frame detected! Hash: $currentHash. Sending to Backend...")
+                        
+                        // Mock sending to backend
+                        ApiService.sendStepToBackend(File(""), "<hierarchy/>", "Auto-goal") { action, x, y ->
+                            Log.i("Akaria", "Received Action: $action at ($x, $y)")
+                        }
+                    } else {
+                        Log.d("Akaria", "Screen unchanged. Skipping inference.")
                     }
-                } else {
-                    Log.d("Akaria", "Screen unchanged. Skipping inference.")
+                    
+                    image.close()
                 }
-                
-                image.close()
+            } catch (e: Exception) {
+                Log.e("Akaria", "Crash in captureRunnable", e)
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(this@ScreenCaptureService, "Capture Crash: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
             handler.postDelayed(this, 1500) // Sped up to 1.5 seconds since we are skipping redundant frames
         }
