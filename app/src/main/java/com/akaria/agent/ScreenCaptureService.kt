@@ -13,6 +13,7 @@ import android.media.projection.MediaProjectionManager
 import android.os.IBinder
 import android.os.Handler
 import android.os.Looper
+import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -53,7 +54,11 @@ class ScreenCaptureService : Service() {
             .setSmallIcon(android.R.drawable.ic_menu_camera) // REQUIRED by Android
             .build()
 
-        startForeground(1, notification)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
+        } else {
+            startForeground(1, notification)
+        }
     }
 
     private fun startCapture(resultCode: Int, data: Intent) {
