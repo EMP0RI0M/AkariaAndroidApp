@@ -17,6 +17,8 @@ import android.graphics.PixelFormat
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import java.io.File
+import java.security.MessageDigest
+import java.nio.ByteBuffer
 
 class ScreenCaptureService : Service() {
 
@@ -24,6 +26,7 @@ class ScreenCaptureService : Service() {
     private var virtualDisplay: VirtualDisplay? = null
     private var imageReader: ImageReader? = null
     private val handler = Handler(Looper.getMainLooper())
+    private var lastFrameHash: String = ""
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -81,21 +84,36 @@ class ScreenCaptureService : Service() {
         override fun run() {
             val image = imageReader?.acquireLatestImage()
             if (image != null) {
-                // In a real app: Convert image plane to Bitmap, save to file
-                // File tempFile = File(cacheDir, "current_screen.png")
-                // saveBitmap(bitmap, tempFile)
+                val planes = image.planes
+                val buffer = planes[0].buffer
+                val currentHash = computeHash(buffer)
                 
-                Log.i("Akaria", "Captured frame! Sending to Termux Backend...")
-                
-                // Mock sending to backend
-                ApiService.sendStepToBackend(File(""), "<hierarchy/>", "Auto-goal") { action, x, y ->
-                    Log.i("Akaria", "Received Action: $action at ($x, $y)")
+                if (currentHash != lastFrameHash) {
+                    lastFrameHash = currentHash
+                    Log.i("Akaria", "New frame detected! Hash: $currentHash. Sending to Backend...")
+                    
+                    // Mock sending to backend
+                    ApiService.sendStepToBackend(File(""), "<hierarchy/>", "Auto-goal") { action, x, y ->
+                        Log.i("Akaria", "Received Action: $action at ($x, $y)")
+                    }
+                } else {
+                    Log.d("Akaria", "Screen unchanged. Skipping inference.")
                 }
                 
                 image.close()
             }
-            handler.postDelayed(this, 3000) // Loop every 3 seconds
+            handler.postDelayed(this, 1500) // Sped up to 1.5 seconds since we are skipping redundant frames
         }
+    }
+
+    private fun computeHash(buffer: ByteBuffer): String {
+        buffer.rewind()
+        val md = MessageDigest.getInstance("MD5")
+        // To save CPU, we could hash just a subset of the buffer, 
+        // but modern phones can hash a screen buffer extremely fast.
+        md.update(buffer)
+        buffer.rewind()
+        return md.digest().joinToString("") { "%02x".format(it) }
     }
 
     override fun onDestroy() {
