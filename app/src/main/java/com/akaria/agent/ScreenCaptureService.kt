@@ -22,8 +22,6 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.util.Log
 import android.widget.Toast
-import android.os.Handler
-import android.os.Looper
 import androidx.core.app.NotificationCompat
 import java.io.File
 import java.security.MessageDigest
