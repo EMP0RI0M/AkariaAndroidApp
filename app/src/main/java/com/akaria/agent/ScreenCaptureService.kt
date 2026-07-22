@@ -50,7 +50,7 @@ class ScreenCaptureService : Service() {
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Akaria Engine Running")
             .setContentText("Capturing screen for AI analysis...")
-            //.setSmallIcon(R.mipmap.ic_launcher) // Excluded to prevent crash
+            .setSmallIcon(android.R.drawable.ic_menu_camera) // REQUIRED by Android
             .build()
 
         startForeground(1, notification)
