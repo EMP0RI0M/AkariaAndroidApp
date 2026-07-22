@@ -9,7 +9,7 @@ object ApiService {
     
     private val executor = Executors.newSingleThreadExecutor()
     // Points to the Python FastAPI server running in Termux on the same device
-    private const val BACKEND_URL = "http://localhost:9000/api/v1/step"
+    private const val BACKEND_URL = "http://127.0.0.1:9000/api/v1/step"
 
     /**
      * Sends the screenshot, XML, and goal to the Ubuntu backend.
