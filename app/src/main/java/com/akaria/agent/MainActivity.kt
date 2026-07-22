@@ -41,14 +41,11 @@ class MainActivity : Activity() {
                 Log.i("Akaria", "Screen capture permission granted.")
                 Toast.makeText(this, "Akaria Engine Started", Toast.LENGTH_SHORT).show()
                 
-                // 1. In a real app, we start a Foreground Service here passing the 'data' Intent 
-                // so the service can capture the screen in the background using VirtualDisplay.
-                
-                // 2. The background service loops:
-                //    a. capture screenshot to File
-                //    b. get UI XML from AkariaAccessibilityService
-                //    c. send to Ubuntu backend (ApiService)
-                //    d. execute tap from response
+                val serviceIntent = Intent(this, ScreenCaptureService::class.java).apply {
+                    putExtra("RESULT_CODE", resultCode)
+                    putExtra("DATA", data)
+                }
+                startForegroundService(serviceIntent)
             } else {
                 Log.e("Akaria", "Screen capture permission denied.")
             }
