@@ -1,0 +1,58 @@
+package com.akaria.agent
+
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.media.projection.MediaProjectionManager
+import android.os.Bundle
+import android.util.Log
+import android.widget.Button
+import android.widget.Toast
+import java.io.File
+
+class MainActivity : Activity() {
+
+    private val SCREEN_CAPTURE_REQUEST_CODE = 1001
+    private lateinit var mediaProjectionManager: MediaProjectionManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Simple programmatic UI for testing
+        val startButton = Button(this).apply {
+            text = "Start Akaria Screen Capture"
+            setOnClickListener {
+                startScreenCapture()
+            }
+        }
+        setContentView(startButton)
+
+        mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+    }
+
+    private fun startScreenCapture() {
+        val captureIntent = mediaProjectionManager.createScreenCaptureIntent()
+        startActivityForResult(captureIntent, SCREEN_CAPTURE_REQUEST_CODE)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == SCREEN_CAPTURE_REQUEST_CODE) {
+            if (resultCode == RESULT_OK && data != null) {
+                Log.i("Akaria", "Screen capture permission granted.")
+                Toast.makeText(this, "Akaria Engine Started", Toast.LENGTH_SHORT).show()
+                
+                // 1. In a real app, we start a Foreground Service here passing the 'data' Intent 
+                // so the service can capture the screen in the background using VirtualDisplay.
+                
+                // 2. The background service loops:
+                //    a. capture screenshot to File
+                //    b. get UI XML from AkariaAccessibilityService
+                //    c. send to Ubuntu backend (ApiService)
+                //    d. execute tap from response
+            } else {
+                Log.e("Akaria", "Screen capture permission denied.")
+            }
+        }
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+}
