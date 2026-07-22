@@ -23,18 +23,30 @@ object ApiService {
     ) {
         executor.execute {
             try {
-                // Mocking the network call for rapid development architecture.
-                // Normally we'd build a Multipart Form request here with `screenshot` and `xmlData`.
+                // Create HTTP connection to Termux backend
+                val url = URL(BACKEND_URL)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "POST"
+                connection.doOutput = true
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+
+                // Send simple JSON payload
+                val payload = """{"goal": "$goal", "xmlData": "$xmlData", "status": "screenshot_ready"}"""
+                connection.outputStream.use { os ->
+                    val input = payload.toByteArray(Charsets.UTF_8)
+                    os.write(input, 0, input.size)
+                }
+
+                // Check response
+                val responseCode = connection.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    // For now, we hardcode the tap parsed response to prove the loop
+                    onActionReceived("tap", 195f, 245f)
+                }
                 
-                // Simulate network latency
-                Thread.sleep(1500)
-                
-                // Simulate backend response
-                val mockResponse = """{"action": "tap", "x": 195, "y": 245, "confidence": 0.95}"""
-                
-                // In production, parse JSON here
-                onActionReceived("tap", 195f, 245f)
-                
+                connection.disconnect()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
