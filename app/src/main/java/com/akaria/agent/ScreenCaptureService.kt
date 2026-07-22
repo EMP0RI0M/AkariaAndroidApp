@@ -80,6 +80,13 @@ class ScreenCaptureService : Service() {
         val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         mediaProjection = projectionManager.getMediaProjection(resultCode, data)
 
+        mediaProjection?.registerCallback(object : MediaProjection.Callback() {
+            override fun onStop() {
+                super.onStop()
+                Log.i("Akaria", "MediaProjection stopped")
+            }
+        }, handler)
+
         val metrics = resources.displayMetrics
         val density = metrics.densityDpi
         val width = metrics.widthPixels
