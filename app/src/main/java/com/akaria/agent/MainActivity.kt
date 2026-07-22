@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
+import android.provider.Settings
+import android.net.Uri
 import android.util.Log
 import android.widget.Button
 import android.widget.Toast
@@ -19,13 +21,19 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         
         // Simple programmatic UI for testing
-        val startButton = Button(this).apply {
-            text = "Start Akaria Screen Capture"
+        val captureButton = Button(this).apply {
+            text = "START AKARIA SCREEN CAPTURE"
             setOnClickListener {
+                if (!Settings.canDrawOverlays(this@MainActivity)) {
+                    Toast.makeText(this@MainActivity, "Please grant 'Display over other apps' permission for the floating icon.", Toast.LENGTH_LONG).show()
+                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+                    startActivity(intent)
+                    return@setOnClickListener
+                }
                 startScreenCapture()
             }
         }
-        setContentView(startButton)
+        setContentView(captureButton)
 
         mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
     }

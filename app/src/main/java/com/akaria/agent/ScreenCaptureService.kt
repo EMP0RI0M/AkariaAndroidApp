@@ -14,6 +14,11 @@ import android.os.IBinder
 import android.os.Handler
 import android.os.Looper
 import android.content.pm.ServiceInfo
+import android.view.WindowManager
+import android.view.Gravity
+import android.view.View
+import android.widget.TextView
+import android.graphics.Color
 import android.graphics.PixelFormat
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -28,6 +33,8 @@ class ScreenCaptureService : Service() {
     private var imageReader: ImageReader? = null
     private val handler = Handler(Looper.getMainLooper())
     private var lastFrameHash: String = ""
+    private var windowManager: WindowManager? = null
+    private var floatingView: View? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -81,8 +88,35 @@ class ScreenCaptureService : Service() {
 
         Log.i("Akaria", "Screen capture virtual display created.")
         
-        // Setup capture loop (e.g. 1 frame every 3 seconds)
-        handler.postDelayed(captureRunnable, 3000)
+        showFloatingIcon()
+        
+        // Setup capture loop
+        handler.postDelayed(captureRunnable, 1500)
+    }
+
+    private fun showFloatingIcon() {
+        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        
+        val tv = TextView(this).apply {
+            text = "👁 Akaria"
+            textSize = 14f
+            setBackgroundColor(Color.parseColor("#99000000")) // Semi-transparent black
+            setPadding(30, 20, 30, 20)
+            setTextColor(Color.WHITE)
+        }
+        floatingView = tv
+        
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT
+        )
+        params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+        params.y = 100 // Slightly below the top edge
+        
+        windowManager?.addView(floatingView, params)
     }
 
     private val captureRunnable = object : Runnable {
@@ -123,6 +157,7 @@ class ScreenCaptureService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        floatingView?.let { windowManager?.removeView(it) }
         virtualDisplay?.release()
         imageReader?.close()
         mediaProjection?.stop()
