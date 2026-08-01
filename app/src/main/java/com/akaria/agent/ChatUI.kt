@@ -14,108 +14,125 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.akaria.agent.glass.GlassBox
+import com.akaria.agent.glass.GlassContainer
 
 @Composable
 fun AkariaFloatingUI() {
     var expanded by remember { mutableStateOf(false) }
 
-    if (expanded) {
-        // Expanded Chat Interface
-        Card(
-            modifier = Modifier
-                .width(320.dp)
-                .height(400.dp)
-                .padding(8.dp),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xEE121212)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
-        ) {
-            Column(
+    GlassContainer(
+        modifier = Modifier.fillMaxSize(),
+        content = {
+            // We could pipe the MediaProjection bitmap here if we want background blur
+            // For now, this lets GlassBox work natively within our floating window
+        }
+    ) {
+        if (expanded) {
+            // Expanded Chat Interface
+            GlassBox(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
+                    .width(320.dp)
+                    .height(400.dp)
+                    .padding(8.dp),
+                shape = RoundedCornerShape(24.dp),
+                blur = 0.4f,
+                tint = Color(0x88121212),
+                darkness = 0.2f,
+                scale = 0.1f,
+                elevation = 10.dp
             ) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Akaria",
-                        color = Color(0xFFBB86FC),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                    Text(
-                        text = "Close",
-                        color = Color.Gray,
-                        modifier = Modifier.clickable { expanded = false }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Chat Area
-                Box(
+                Column(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .background(Color(0xFF1E1E1E), RoundedCornerShape(12.dp))
-                        .padding(12.dp)
+                        .fillMaxSize()
+                        .padding(16.dp)
                 ) {
-                    Text(
-                        text = "I am ready. Tell me what to do.",
-                        color = Color.White
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Input Area
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = "",
-                        onValueChange = {},
-                        placeholder = { Text("Type a command...", color = Color.Gray) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFFBB86FC),
-                            unfocusedBorderColor = Color.DarkGray,
-                            focusedTextColor = Color.White
-                        )
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = { /* TODO: Send to Planner */ },
-                        shape = CircleShape,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBB86FC))
+                    // Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Go", color = Color.Black)
+                        Text(
+                            text = "Akaria",
+                            color = Color(0xFFBB86FC),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
+                        )
+                        Text(
+                            text = "Close",
+                            color = Color.LightGray,
+                            modifier = Modifier.clickable { expanded = false }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Chat Area
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .background(Color(0x33FFFFFF), RoundedCornerShape(12.dp))
+                            .padding(12.dp)
+                    ) {
+                        Text(
+                            text = "I am ready. Tell me what to do.",
+                            color = Color.White
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Input Area
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = "",
+                            onValueChange = {},
+                            placeholder = { Text("Type a command...", color = Color.Gray) },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFFBB86FC),
+                                unfocusedBorderColor = Color.DarkGray,
+                                focusedTextColor = Color.White
+                            )
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = { /* TODO: Send to Planner */ },
+                            shape = CircleShape,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBB86FC))
+                        ) {
+                            Text("Go", color = Color.Black)
+                        }
                     }
                 }
             }
-        }
-    } else {
-        // Collapsed Floating Bubble
-        Box(
-            modifier = Modifier
-                .size(60.dp)
-                .clip(CircleShape)
-                .background(Color(0xFFBB86FC))
-                .clickable { expanded = true },
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "A",
-                color = Color.Black,
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp
-            )
+        } else {
+            // Collapsed Floating Bubble
+            GlassBox(
+                modifier = Modifier
+                    .size(60.dp)
+                    .clickable { expanded = true },
+                shape = CircleShape,
+                blur = 0.3f,
+                tint = Color(0xBBBB86FC),
+                darkness = 0.1f,
+                scale = 0.2f
+            ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "A",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp
+                    )
+                }
+            }
         }
     }
 }
