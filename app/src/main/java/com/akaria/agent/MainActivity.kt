@@ -28,6 +28,19 @@ class MainActivity : Activity() {
         }
         
         val scheduler = EngineScheduler()
+        
+        // Initialize OpenPhone Architecture (App Map)
+        val appMap = AppMap().apply {
+            addNode(AppNode("home_screen", "The Android Home Screen"))
+            addNode(AppNode("settings_main", "The main settings menu"))
+            addNode(AppNode("settings_bluetooth", "The Bluetooth settings page"))
+            
+            // Add a known deterministic macro path
+            addEdge(MacroEdge("home_screen", "settings_main", "tap", 100f, 200f))
+            addEdge(MacroEdge("settings_main", "settings_bluetooth", "tap", 150f, 300f))
+        }
+        
+        val planner = Planner(appMap, scheduler)
 
         // Simple programmatic UI for testing
         val captureButton = Button(this).apply {
@@ -39,16 +52,15 @@ class MainActivity : Activity() {
                     startActivity(intent)
                     return@setOnClickListener
                 }
-                // Test C++ JNI Bridge on a Background Thread
+                // Test PhoneCLI / AppMap logic
                 val modelPath = File(modelsDir, "tiny.gguf").absolutePath
-                if (File(modelPath).exists()) {
-                    scheduler.testInferenceAsync(modelPath, "Hello") { jniMsg ->
-                        Toast.makeText(this@MainActivity, jniMsg, Toast.LENGTH_LONG).show()
-                        Log.i("Akaria", "C++ Engine says: \$jniMsg")
+                
+                // Test 1: A known path (should execute instantly without AI)
+                planner.executeGoal("home_screen", "settings_bluetooth", modelPath) {
+                    // Test 2: An unknown path (should fallback to VLM inference)
+                    planner.executeGoal("home_screen", "unknown_app", modelPath) {
+                        Toast.makeText(this@MainActivity, "Planner tests complete. Check Logcat.", Toast.LENGTH_LONG).show()
                     }
-                } else {
-                    Toast.makeText(this@MainActivity, "Missing GGUF model: \$modelPath", Toast.LENGTH_LONG).show()
-                    Log.w("Akaria", "Please copy tiny.gguf to \$modelPath")
                 }
                 
                 startScreenCapture()
