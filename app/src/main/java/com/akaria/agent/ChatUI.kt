@@ -11,21 +11,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import com.akaria.agent.glass.GlassBox
+import com.akaria.agent.glass.GlassContainer
+import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.akaria.agent.glass.GlassBox
-import com.akaria.agent.glass.GlassContainer
 
 @Composable
 fun AkariaFloatingUI() {
     var expanded by remember { mutableStateOf(false) }
+    val latestFrame by ScreenCaptureService.screenFrames.collectAsState()
 
     GlassContainer(
         modifier = Modifier.fillMaxSize(),
         content = {
-            // We could pipe the MediaProjection bitmap here if we want background blur
-            // For now, this lets GlassBox work natively within our floating window
+            // Live background for true liquid glass refraction
+            latestFrame?.let { bitmap ->
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = "Background",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
         }
     ) {
         if (expanded) {

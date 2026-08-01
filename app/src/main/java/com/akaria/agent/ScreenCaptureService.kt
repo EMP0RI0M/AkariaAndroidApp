@@ -26,8 +26,21 @@ import androidx.core.app.NotificationCompat
 import java.io.File
 import java.security.MessageDigest
 import java.nio.ByteBuffer
+import android.graphics.Bitmap
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 
 class ScreenCaptureService : Service() {
+
+    companion object {
+        private val _screenFrames = MutableStateFlow<Bitmap?>(null)
+        val screenFrames: StateFlow<Bitmap?> = _screenFrames.asStateFlow()
+    }
 
     private var mediaProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
@@ -36,6 +49,7 @@ class ScreenCaptureService : Service() {
     private var lastFrameHash: String = ""
     private var windowManager: WindowManager? = null
     private var floatingView: View? = null
+    private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -146,14 +160,32 @@ class ScreenCaptureService : Service() {
             try {
                 val image = imageReader?.acquireLatestImage()
                 if (image != null) {
+                    val width = image.width
+                    val height = image.height
                     val planes = image.planes
                     val buffer = planes[0].buffer
+                    val pixelStride = planes[0].pixelStride
+                    val rowStride = planes[0].rowStride
+                    val rowPadding = rowStride - pixelStride * width
+
                     val currentHash = computeHash(buffer)
                     
                     if (currentHash != lastFrameHash) {
                         lastFrameHash = currentHash
-                        Log.i("Akaria", "New frame detected! Hash: $currentHash. Sending to Backend...")
+                        Log.i("Akaria", "New frame detected! Hash: $currentHash")
                         
+                        // Convert to Bitmap
+                        buffer.rewind()
+                        var bitmap = Bitmap.createBitmap(width + rowPadding / pixelStride, height, Bitmap.Config.ARGB_8888)
+                        bitmap.copyPixelsFromBuffer(buffer)
+                        if (rowPadding > 0) {
+                            bitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height)
+                        }
+                        
+                        serviceScope.launch {
+                            _screenFrames.value = bitmap
+                        }
+
                         // Mock sending to backend
                         ApiService.sendStepToBackend(File(""), "<hierarchy/>", "Auto-goal") { action, x, y ->
                             Log.i("Akaria", "Received Action: $action at ($x, $y)")
