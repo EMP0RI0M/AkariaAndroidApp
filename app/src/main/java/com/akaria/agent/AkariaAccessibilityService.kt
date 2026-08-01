@@ -8,8 +8,13 @@ import android.util.Log
 
 class AkariaAccessibilityService : AccessibilityService() {
 
+    companion object {
+        var instance: AkariaAccessibilityService? = null
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
+        instance = this
         Log.i("Akaria", "Accessibility Service Connected")
     }
 
@@ -20,6 +25,14 @@ class AkariaAccessibilityService : AccessibilityService() {
 
     override fun onInterrupt() {
         Log.w("Akaria", "Accessibility Service Interrupted")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (instance == this) {
+            instance = null
+        }
+        Log.i("Akaria", "Accessibility Service Destroyed")
     }
 
     /**

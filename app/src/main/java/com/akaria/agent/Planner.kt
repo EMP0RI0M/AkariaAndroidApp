@@ -20,7 +20,9 @@ class Planner(private val appMap: AppMap, private val engineScheduler: EngineSch
             Log.i("Planner", "Executing PhoneCLI Macro sequence...")
             for ((index, edge) in macroPath.withIndex()) {
                 Log.i("Planner", "Step \${index + 1}: \${edge.actionType} at (\${edge.x}, \${edge.y}) to reach \${edge.toNodeId}")
-                // In the future, this will call AccessibilityService to tap/swipe
+                if (edge.actionType == "tap") {
+                    AkariaAccessibilityService.instance?.performTap(edge.x, edge.y)
+                }
             }
             Log.i("Planner", "Goal reached via AppMap macro!")
             onComplete(true)
