@@ -13,8 +13,8 @@ class AkariaEngine {
     }
 
     /**
-     * A native method that is implemented by the 'akaria_engine' native library,
-     * which is packaged with this application.
+     * Initializes the backend, loads a GGUF model from the given path,
+     * tokenizes the prompt, generates 10-20 tokens, and returns the output.
      */
-    external fun stringFromJNI(): String
+    external fun testModelInference(modelPath: String, prompt: String): String
 }

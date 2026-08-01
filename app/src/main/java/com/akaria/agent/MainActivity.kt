@@ -11,6 +11,7 @@ import android.util.Log
 import android.widget.Button
 import android.widget.Toast
 import java.io.File
+import java.io.File
 
 class MainActivity : Activity() {
 
@@ -20,6 +21,14 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Ensure models directory exists
+        val modelsDir = File(getExternalFilesDir(null), "models")
+        if (!modelsDir.exists()) {
+            modelsDir.mkdirs()
+        }
+        
+        val scheduler = EngineScheduler()
+
         // Simple programmatic UI for testing
         val captureButton = Button(this).apply {
             text = "START AKARIA SCREEN CAPTURE"
@@ -30,11 +39,17 @@ class MainActivity : Activity() {
                     startActivity(intent)
                     return@setOnClickListener
                 }
-                
-                // Test C++ JNI Bridge
-                val jniMsg = AkariaEngine().stringFromJNI()
-                Toast.makeText(this@MainActivity, jniMsg, Toast.LENGTH_SHORT).show()
-                Log.i("Akaria", "C++ Engine says: \$jniMsg")
+                // Test C++ JNI Bridge on a Background Thread
+                val modelPath = File(modelsDir, "tiny.gguf").absolutePath
+                if (File(modelPath).exists()) {
+                    scheduler.testInferenceAsync(modelPath, "Hello") { jniMsg ->
+                        Toast.makeText(this@MainActivity, jniMsg, Toast.LENGTH_LONG).show()
+                        Log.i("Akaria", "C++ Engine says: \$jniMsg")
+                    }
+                } else {
+                    Toast.makeText(this@MainActivity, "Missing GGUF model: \$modelPath", Toast.LENGTH_LONG).show()
+                    Log.w("Akaria", "Please copy tiny.gguf to \$modelPath")
+                }
                 
                 startScreenCapture()
             }
