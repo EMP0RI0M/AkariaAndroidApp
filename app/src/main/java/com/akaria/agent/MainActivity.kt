@@ -86,6 +86,11 @@ class MainActivity : Activity() {
                     putExtra("DATA", data)
                 }
                 startForegroundService(serviceIntent)
+                
+                // Start the Compose Floating Chat UI
+                val floatingIntent = Intent(this, FloatingService::class.java)
+                startService(floatingIntent)
+                
             } else {
                 Log.e("Akaria", "Screen capture permission denied.")
             }
