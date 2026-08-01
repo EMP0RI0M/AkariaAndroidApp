@@ -30,6 +30,12 @@ class MainActivity : Activity() {
                     startActivity(intent)
                     return@setOnClickListener
                 }
+                
+                // Test C++ JNI Bridge
+                val jniMsg = AkariaEngine().stringFromJNI()
+                Toast.makeText(this@MainActivity, jniMsg, Toast.LENGTH_SHORT).show()
+                Log.i("Akaria", "C++ Engine says: \$jniMsg")
+                
                 startScreenCapture()
             }
         }
