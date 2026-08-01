@@ -18,6 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import com.akaria.agent.glass.GlassBox
+import com.akaria.agent.glass.GlassContainer
 
 enum class Screen {
     WELCOME, HARDWARE_CHECK, SETUP_COMPLETE, HOME
@@ -31,8 +33,9 @@ fun AkariaApp() {
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFF0A0A0A) // Deep AMOLED Black
     ) {
-        AnimatedContent(
-            targetState = currentScreen,
+        GlassContainer(modifier = Modifier.fillMaxSize(), content = {}) {
+            AnimatedContent(
+                targetState = currentScreen,
             transitionSpec = {
                 fadeIn(animationSpec = tween(500)) togetherWith fadeOut(animationSpec = tween(500))
             },
@@ -50,6 +53,7 @@ fun AkariaApp() {
                 )
                 Screen.HOME -> HomeScreen()
             }
+        }
         }
     }
 }
@@ -70,12 +74,15 @@ fun WelcomeScreen(onNext: () -> Unit) {
                 .fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
-            // Placeholder for the liquid glass orb
-            Box(
-                modifier = Modifier
-                    .size(120.dp)
-                    .background(Color(0xFFBB86FC).copy(alpha = 0.8f), CircleShape)
-            )
+            GlassBox(
+                modifier = Modifier.size(120.dp),
+                shape = CircleShape,
+                blur = 0.5f,
+                tint = Color(0x66BB86FC),
+                darkness = 0.1f,
+                scale = 0.2f,
+                elevation = 12.dp
+            ) {}
         }
 
         // Bottom Section: Typography
@@ -170,10 +177,13 @@ fun HardwareCheckScreen(onNext: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(16.dp))
             
-            Card(
+            GlassBox(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF141414)),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                blur = 0.3f,
+                tint = Color(0x33FFFFFF),
+                darkness = 0.2f,
+                elevation = 8.dp
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("CPU: Snapdragon / Tensor Equivalent", color = Color(0xFFA0A0A0), fontSize = 14.sp)
@@ -194,10 +204,13 @@ fun HardwareCheckScreen(onNext: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            Card(
+            GlassBox(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF141414)),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                blur = 0.3f,
+                tint = Color(0x33FFFFFF),
+                darkness = 0.2f,
+                elevation = 8.dp
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Model: Gemma 4B Q4 (Recommended)", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -307,10 +320,13 @@ fun HomeScreen() {
         Text("System Status", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(16.dp))
 
-        Card(
+        GlassBox(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF141414)),
-            shape = RoundedCornerShape(24.dp)
+            shape = RoundedCornerShape(24.dp),
+            blur = 0.3f,
+            tint = Color(0x33FFFFFF),
+            darkness = 0.2f,
+            elevation = 12.dp
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 StatusRow("Engine", "Ready", Color(0xFF78D890))
@@ -368,10 +384,13 @@ fun StatusRow(label: String, value: String, valueColor: Color) {
 
 @Composable
 fun ModuleCard(title: String, subtitle: String, modifier: Modifier = Modifier) {
-    Card(
+    GlassBox(
         modifier = modifier.height(100.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF141414)),
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(20.dp),
+        blur = 0.3f,
+        tint = Color(0x33FFFFFF),
+        darkness = 0.2f,
+        elevation = 8.dp
     ) {
         Column(
             modifier = Modifier
