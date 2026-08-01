@@ -10,9 +10,11 @@ import android.net.Uri
 import android.util.Log
 import android.widget.Button
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import java.io.File
 
-class MainActivity : Activity() {
+class MainActivity : ComponentActivity() {
 
     private val SCREEN_CAPTURE_REQUEST_CODE = 1001
     private lateinit var mediaProjectionManager: MediaProjectionManager
@@ -41,31 +43,10 @@ class MainActivity : Activity() {
         
         val planner = Planner(appMap, scheduler)
 
-        // Simple programmatic UI for testing
-        val captureButton = Button(this).apply {
-            text = "START AKARIA SCREEN CAPTURE"
-            setOnClickListener {
-                if (!Settings.canDrawOverlays(this@MainActivity)) {
-                    Toast.makeText(this@MainActivity, "Please grant 'Display over other apps' permission for the floating icon.", Toast.LENGTH_LONG).show()
-                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
-                    startActivity(intent)
-                    return@setOnClickListener
-                }
-                // Test PhoneCLI / AppMap logic
-                val modelPath = File(modelsDir, "tiny.gguf").absolutePath
-                
-                // Test 1: A known path (should execute instantly without AI)
-                planner.executeGoal("home_screen", "settings_bluetooth", modelPath) {
-                    // Test 2: An unknown path (should fallback to VLM inference)
-                    planner.executeGoal("home_screen", "unknown_app", modelPath) {
-                        Toast.makeText(this@MainActivity, "Planner tests complete. Check Logcat.", Toast.LENGTH_LONG).show()
-                    }
-                }
-                
-                startScreenCapture()
-            }
+        // Set up the modern Compose UI
+        setContent {
+            AkariaApp()
         }
-        setContentView(captureButton)
 
         mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
     }
