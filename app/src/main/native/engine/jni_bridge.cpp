@@ -8,6 +8,18 @@
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
+// Helper for adding a token to a batch
+static void akaria_batch_add(struct llama_batch & batch, llama_token id, llama_pos pos, const std::vector<llama_seq_id> & seq_ids, bool logits) {
+    batch.token   [batch.n_tokens] = id;
+    batch.pos     [batch.n_tokens] = pos;
+    batch.n_seq_id[batch.n_tokens] = seq_ids.size();
+    for (size_t i = 0; i < seq_ids.size(); ++i) {
+        batch.seq_id[batch.n_tokens][i] = seq_ids[i];
+    }
+    batch.logits  [batch.n_tokens] = logits;
+    batch.n_tokens++;
+}
+
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_akaria_agent_AkariaEngine_testModelInference(
         JNIEnv* env,
@@ -40,7 +52,7 @@ Java_com_akaria_agent_AkariaEngine_testModelInference(
     LOGI("Model loaded successfully! Initializing context...");
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = 512;
-    llama_context* ctx = llama_new_context_with_model(model, ctx_params);
+    llama_context* ctx = llama_init_from_model(model, ctx_params);
     
     if (!ctx) {
         LOGE("Context failed to initialize");
@@ -67,7 +79,7 @@ Java_com_akaria_agent_AkariaEngine_testModelInference(
     // Prepare batch
     llama_batch batch = llama_batch_init(512, 0, 1);
     for (size_t i = 0; i < tokens_list.size(); i++) {
-        llama_batch_add(batch, tokens_list[i], i, { 0 }, false);
+        akaria_batch_add(batch, tokens_list[i], i, { 0 }, false);
     }
     batch.logits[batch.n_tokens - 1] = true; 
     
@@ -82,9 +94,18 @@ Java_com_akaria_agent_AkariaEngine_testModelInference(
     LOGI("Generating 10-20 tokens...");
     for (int i = 0; i < 15; i++) {
         auto * logits = llama_get_logits_ith(ctx, batch.n_tokens - 1);
-        llama_token new_token_id = llama_token_argmax(vocab, logits, llama_vocab_n_tokens(vocab));
         
-        if (llama_token_is_eog(vocab, new_token_id)) {
+        llama_token new_token_id = 0;
+        float max_logit = -1e9;
+        int n_vocab = llama_vocab_n_tokens(vocab);
+        for (int j = 0; j < n_vocab; j++) {
+            if (logits[j] > max_logit) {
+                max_logit = logits[j];
+                new_token_id = j;
+            }
+        }
+        
+        if (llama_vocab_is_eog(vocab, new_token_id)) {
             break;
         }
         
@@ -94,8 +115,8 @@ Java_com_akaria_agent_AkariaEngine_testModelInference(
             result += std::string(buf, n);
         }
         
-        llama_batch_clear(batch);
-        llama_batch_add(batch, new_token_id, n_cur, { 0 }, true);
+        batch.n_tokens = 0; // Clear batch
+        akaria_batch_add(batch, new_token_id, n_cur, { 0 }, true);
         n_cur += 1;
         
         if (llama_decode(ctx, batch) != 0) {

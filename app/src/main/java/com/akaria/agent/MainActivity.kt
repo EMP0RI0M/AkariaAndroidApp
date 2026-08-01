@@ -11,7 +11,6 @@ import android.util.Log
 import android.widget.Button
 import android.widget.Toast
 import java.io.File
-import java.io.File
 
 class MainActivity : Activity() {
 
