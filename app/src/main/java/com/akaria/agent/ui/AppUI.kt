@@ -33,11 +33,6 @@ enum class Screen {
 fun AkariaApp(engineViewModel: EngineViewModel = viewModel()) {
     var currentScreen by remember { mutableStateOf(Screen.WELCOME) }
     
-    // Automatically check for models when app starts
-    LaunchedEffect(Unit) {
-        engineViewModel.checkModels()
-    }
-
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFF0A0A0A) // Deep AMOLED Black
@@ -62,6 +57,7 @@ fun AkariaApp(engineViewModel: EngineViewModel = viewModel()) {
                     onNext = { currentScreen = Screen.HOME }
                 )
                 Screen.HOME -> HomeScreen(
+                    engineViewModel = engineViewModel,
                     onTestModel = { currentScreen = Screen.INFERENCE_TEST }
                 )
                 Screen.INFERENCE_TEST -> InferenceTestScreen(
@@ -79,6 +75,8 @@ fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: 
     val coreState by engineViewModel.coreState.collectAsState()
     val downloadProgress by engineViewModel.downloadProgress.collectAsState()
     val telemetry by engineViewModel.telemetry.collectAsState()
+    var isChecking by remember { mutableStateOf(true) }
+    val glassScope = this
 
     LaunchedEffect(Unit) {
         delay(2000) // Simulate diagnostics
@@ -110,7 +108,7 @@ fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: 
             )
             Spacer(modifier = Modifier.height(16.dp))
             
-            GlassBox(
+            glassScope.GlassBox(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 blur = 0.3f,
@@ -137,7 +135,7 @@ fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: 
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            GlassBox(
+            glassScope.GlassBox(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 blur = 0.3f,
@@ -245,7 +243,11 @@ fun GlassBoxScope.SetupCompleteScreen(onNext: () -> Unit) {
 }
 
 @Composable
-fun GlassBoxScope.HomeScreen(onTestModel: () -> Unit) {
+fun GlassBoxScope.HomeScreen(engineViewModel: EngineViewModel, onTestModel: () -> Unit) {
+    val coreState by engineViewModel.coreState.collectAsState()
+    val telemetry by engineViewModel.telemetry.collectAsState()
+    val glassScope = this
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -274,7 +276,7 @@ fun GlassBoxScope.HomeScreen(onTestModel: () -> Unit) {
         Text("System Status", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(16.dp))
 
-        GlassBox(
+        glassScope.GlassBox(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             blur = 0.3f,
@@ -296,13 +298,13 @@ fun GlassBoxScope.HomeScreen(onTestModel: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            ModuleCard(title = "\uD83D\uDCF1 Automation", subtitle = "ON", modifier = Modifier.weight(1f))
-            ModuleCard(title = "\uD83D\uDC41\uFE0F Vision", subtitle = "ON", modifier = Modifier.weight(1f))
+            glassScope.ModuleCard(title = "\uD83D\uDCF1 Automation", subtitle = "ON", modifier = Modifier.weight(1f))
+            glassScope.ModuleCard(title = "\uD83D\uDC41\uFE0F Vision", subtitle = "ON", modifier = Modifier.weight(1f))
         }
         Spacer(modifier = Modifier.height(16.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            ModuleCard(title = "\uD83E\uDDE0 Memory", subtitle = "204 Nodes", modifier = Modifier.weight(1f))
-            ModuleCard(title = "\uD83D\uDCC8 Telemetry", subtitle = "14 tok/s", modifier = Modifier.weight(1f))
+            glassScope.ModuleCard(title = "\uD83D\uDDE3\uFE0F Voice", subtitle = "OFF", modifier = Modifier.weight(1f))
+            glassScope.ModuleCard(title = "\uD83D\uDD04 Memory", subtitle = "ON", modifier = Modifier.weight(1f))
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -364,6 +366,7 @@ fun GlassBoxScope.InferenceTestScreen(engineViewModel: EngineViewModel, onBack: 
     val coreState by engineViewModel.coreState.collectAsState()
     val inferenceResult by engineViewModel.inferenceResult.collectAsState()
     var prompt by remember { mutableStateOf("Hello!") }
+    val glassScope = this
 
     Column(
         modifier = Modifier
@@ -413,7 +416,7 @@ fun GlassBoxScope.InferenceTestScreen(engineViewModel: EngineViewModel, onBack: 
         Text("Output:", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(16.dp))
 
-        GlassBox(
+        glassScope.GlassBox(
             modifier = Modifier.fillMaxWidth().weight(1f),
             shape = RoundedCornerShape(16.dp),
             blur = 0.3f,
