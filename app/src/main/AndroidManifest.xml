@@ -14,7 +14,7 @@
         android:usesCleartextTraffic="true"> <!-- Allow HTTP to localhost:9000 -->
 
         <service
-            android:name=".AkariaAccessibilityService"
+            android:name=".engine.accessibility.AkariaAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="true">
             <intent-filter>
