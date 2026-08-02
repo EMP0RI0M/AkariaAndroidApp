@@ -97,10 +97,10 @@ class AkariaAccessibilityService : AccessibilityService() {
         val hasText = !node.text.isNullOrBlank() || !node.contentDescription.isNullOrBlank()
         
         if (isInteractive || hasText) {
-            val type = when {
-                node.isClickable -> "button/clickable"
+            val role = when {
                 node.isScrollable -> "scrollable"
-                node.isCheckable -> "checkbox/toggle"
+                node.isCheckable -> "switch"
+                node.isClickable -> "button"
                 else -> "text"
             }
             
@@ -108,8 +108,15 @@ class AkariaAccessibilityService : AccessibilityService() {
             val contentDesc = node.contentDescription?.toString()?.replace("\"", "\\\"") ?: ""
             val description = if (text.isNotBlank()) text else contentDesc
             
-            if (description.isNotBlank()) {
-                elements.add("  {\"type\": \"$type\", \"description\": \"$description\"}")
+            val rect = android.graphics.Rect()
+            node.getBoundsInScreen(rect)
+            
+            val nodeId = node.hashCode() // Use hashcode as a stable-ish ID for this snapshot
+            
+            if (description.isNotBlank() || isInteractive) {
+                elements.add(
+                    """  {"id": $nodeId, "role": "$role", "text": "$description", "clickable": ${node.isClickable}, "enabled": ${node.isEnabled}, "bounds": [${rect.left}, ${rect.top}, ${rect.right}, ${rect.bottom}]}"""
+                )
             }
         }
         

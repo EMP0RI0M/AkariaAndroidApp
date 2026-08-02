@@ -65,9 +65,13 @@ class AkariaCore private constructor(private val context: Context) {
             val defaultModel = ggufFiles.first()
             _coreState.value = CoreState.WarmingUp(defaultModel.name)
             
-            // (In a real implementation, we would load the model into RAM here via JNI,
-            // but currently our JNI bridge loads and unloads per-request. 
-            // We will refactor JNI later to keep the context persistent.)
+            // Actually load it!
+            val success = jniEngine.loadModel(defaultModel.absolutePath, 2048)
+            
+            if (!success) {
+                _coreState.value = CoreState.Error("Failed to load model into RAM.")
+                return@launch
+            }
             
             // 5. System Ready
             _coreState.value = CoreState.Ready(defaultModel)
@@ -90,10 +94,17 @@ class AkariaCore private constructor(private val context: Context) {
         _coreState.value = CoreState.Inferencing
         
         return withContext(Dispatchers.IO) {
+            val sb = StringBuilder()
+            val callback = object : AkariaEngine.TokenCallback {
+                override fun onToken(token: String) {
+                    sb.append(token)
+                    // We could also emit this to a StateFlow for live UI updates!
+                }
+            }
             try {
                 // Call down to JNI
-                val response = jniEngine.testModelInference(state.activeModel.absolutePath, prompt)
-                response
+                jniEngine.generate(prompt, 200, callback)
+                sb.toString()
             } finally {
                 // Return to ready state
                 _coreState.value = CoreState.Ready(state.activeModel)
