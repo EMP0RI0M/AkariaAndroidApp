@@ -8,6 +8,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -28,7 +30,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import android.os.Build
 
 enum class Screen {
-    WELCOME, HARDWARE_CHECK, SETUP_COMPLETE, HOME, INFERENCE_TEST, VOICE
+    WELCOME, HARDWARE_CHECK, SETUP_COMPLETE, HOME, INFERENCE_TEST, VOICE, TIMELINE
 }
 
 @Composable
@@ -61,9 +63,14 @@ fun AkariaApp(engineViewModel: EngineViewModel = viewModel()) {
                 Screen.HOME -> HomeScreen(
                     engineViewModel = engineViewModel,
                     onTestModel = { currentScreen = Screen.INFERENCE_TEST },
-                    onVoice = { currentScreen = Screen.VOICE }
+                    onVoice = { currentScreen = Screen.VOICE },
+                    onTimeline = { currentScreen = Screen.TIMELINE }
                 )
                 Screen.INFERENCE_TEST -> InferenceTestScreen(
+                    engineViewModel = engineViewModel,
+                    onBack = { currentScreen = Screen.HOME }
+                )
+                Screen.TIMELINE -> LiveTimelineScreen(
                     engineViewModel = engineViewModel,
                     onBack = { currentScreen = Screen.HOME }
                 )
@@ -292,9 +299,10 @@ fun GlassBoxScope.SetupCompleteScreen(onNext: () -> Unit) {
 }
 
 @Composable
-fun GlassBoxScope.HomeScreen(engineViewModel: EngineViewModel, onTestModel: () -> Unit, onVoice: () -> Unit) {
+fun GlassBoxScope.HomeScreen(engineViewModel: EngineViewModel, onTestModel: () -> Unit, onVoice: () -> Unit, onTimeline: () -> Unit) {
     val coreState by engineViewModel.coreState.collectAsState()
     val telemetry by engineViewModel.telemetry.collectAsState()
+    var goalInput by remember { mutableStateOf("") }
     val glassScope = this
 
     Column(
@@ -358,18 +366,46 @@ fun GlassBoxScope.HomeScreen(engineViewModel: EngineViewModel, onTestModel: () -
 
         Spacer(modifier = Modifier.weight(1f))
 
+        OutlinedTextField(
+            value = goalInput,
+            onValueChange = { goalInput = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("What would you like me to do?", color = Color(0xFFA0A0A0)) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedBorderColor = Color(0xFFBB86FC),
+                unfocusedBorderColor = Color(0xFF505050)
+            ),
+            trailingIcon = {
+                TextButton(
+                    onClick = {
+                        if (goalInput.isNotBlank()) {
+                            engineViewModel.startAgentTask(goalInput)
+                            onTimeline()
+                        }
+                    },
+                    enabled = coreState is CoreState.Ready && goalInput.isNotBlank()
+                ) {
+                    Text("GO", color = if (coreState is CoreState.Ready) Color(0xFF78D890) else Color.Gray, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+
         Button(
             onClick = onTestModel,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp),
-            shape = RoundedCornerShape(32.dp),
+                .height(48.dp),
+            shape = RoundedCornerShape(24.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFBB86FC),
-                contentColor = Color(0xFF141414)
+                containerColor = Color(0xFF333333),
+                contentColor = Color(0xFFA0A0A0)
             )
         ) {
-            Text("Test Model Inference", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("Engine Diagnostics", fontSize = 14.sp)
         }
     }
 }
@@ -516,6 +552,77 @@ fun GlassBoxScope.InferenceTestScreen(engineViewModel: EngineViewModel, onBack: 
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Back to Hub", color = Color(0xFFA0A0A0))
+        }
+    }
+}
+
+@Composable
+fun GlassBoxScope.LiveTimelineScreen(engineViewModel: EngineViewModel, onBack: () -> Unit) {
+    val timeline by engineViewModel.agentTimeline.collectAsState(initial = emptyList())
+    val glassScope = this
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp)
+            .padding(top = 24.dp),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text("Execution Timeline", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        glassScope.GlassBox(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            shape = RoundedCornerShape(16.dp),
+            blur = 0.3f,
+            tint = Color(0x33FFFFFF),
+            darkness = 0.2f,
+            elevation = 8.dp
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(timeline) { step ->
+                    Row(verticalAlignment = Alignment.Top) {
+                        val icon = when (step.status) {
+                            com.akaria.agent.engine.AgentLoop.StepStatus.PENDING -> "⏳"
+                            com.akaria.agent.engine.AgentLoop.StepStatus.RUNNING -> "🔄"
+                            com.akaria.agent.engine.AgentLoop.StepStatus.SUCCESS -> "✓"
+                            com.akaria.agent.engine.AgentLoop.StepStatus.FAILED -> "❌"
+                        }
+                        val color = when (step.status) {
+                            com.akaria.agent.engine.AgentLoop.StepStatus.PENDING -> Color(0xFFA0A0A0)
+                            com.akaria.agent.engine.AgentLoop.StepStatus.RUNNING -> Color(0xFFBB86FC)
+                            com.akaria.agent.engine.AgentLoop.StepStatus.SUCCESS -> Color(0xFF78D890)
+                            com.akaria.agent.engine.AgentLoop.StepStatus.FAILED -> Color(0xFFF28B82)
+                        }
+                        
+                        Text(icon, color = color, fontSize = 16.sp)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            val time = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date(step.timestamp))
+                            Text(time, color = Color(0xFF808080), fontSize = 12.sp)
+                            Text(step.description, color = Color.White, fontSize = 16.sp)
+                        }
+                    }
+                }
+                
+                if (timeline.isEmpty()) {
+                    item {
+                        Text("No active tasks.", color = Color(0xFFA0A0A0), fontSize = 16.sp)
+                    }
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        TextButton(
+            onClick = onBack,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Back", color = Color(0xFFA0A0A0))
         }
     }
 }

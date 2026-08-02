@@ -19,11 +19,18 @@ import com.akaria.agent.engine.CoreState
 
 import com.akaria.agent.engine.models.DownloadManager
 import com.akaria.agent.engine.models.ModelLibrary
+import com.akaria.agent.engine.AgentLoop
+import com.akaria.agent.engine.planner.Planner
 
 class EngineViewModel(application: Application) : AndroidViewModel(application) {
     
     private val core = AkariaCore.getInstance(application)
     val downloadManager = DownloadManager.getInstance(application)
+    
+    // We instantiate AgentLoop here for now. Planner and AccessibilityService can be null/stubbed initially.
+    private val agentLoop = AgentLoop(core, Planner(), null)
+    
+    val agentTimeline = agentLoop.timeline
     
     // UI exposes the core state directly
     val coreState = core.coreState
@@ -68,6 +75,16 @@ class EngineViewModel(application: Application) : AndroidViewModel(application) 
                 _inferenceResult.value = result
             } catch (e: Exception) {
                 _inferenceResult.value = "Error: ${e.message}"
+            }
+        }
+    }
+
+    fun startAgentTask(goal: String) {
+        viewModelScope.launch {
+            try {
+                agentLoop.startTask(goal)
+            } catch (e: Exception) {
+                Log.e("EngineViewModel", "Agent task failed", e)
             }
         }
     }
