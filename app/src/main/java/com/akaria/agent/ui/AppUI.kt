@@ -339,6 +339,19 @@ fun StatusRow(label: String, value: String, valueColor: Color) {
 }
 
 @Composable
+fun ItemRow(label: String, value: String, isHealthy: Boolean) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, color = Color(0xFFA0A0A0), fontSize = 16.sp)
+        Text(value, color = if (isHealthy) Color(0xFF78D890) else Color(0xFFF28B82), fontSize = 16.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
 fun GlassBoxScope.ModuleCard(title: String, subtitle: String, modifier: Modifier = Modifier) {
     GlassBox(
         modifier = modifier.height(100.dp),
