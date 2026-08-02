@@ -12,6 +12,7 @@ import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import android.util.Log
 
 data class DownloadState(
     val id: String,
@@ -53,6 +54,8 @@ class DownloadManager private constructor(private val context: Context) {
                 var connection: HttpURLConnection
                 var redirectCount = 0
                 
+                Log.d("DownloadManager", "Request URL: $urlString")
+                
                 // Handle 302 redirects
                 while (true) {
                     connection = URL(currentUrl).openConnection() as HttpURLConnection
@@ -71,7 +74,9 @@ class DownloadManager private constructor(private val context: Context) {
                     if (responseCode == HttpURLConnection.HTTP_MOVED_TEMP || 
                         responseCode == HttpURLConnection.HTTP_MOVED_PERM || 
                         responseCode == HttpURLConnection.HTTP_SEE_OTHER) {
-                        currentUrl = connection.getHeaderField("Location")
+                        val location = connection.getHeaderField("Location")
+                        currentUrl = URL(URL(currentUrl), location).toString()
+                        Log.d("DownloadManager", "Redirected to: $currentUrl")
                         redirectCount++
                         if (redirectCount > 5) throw Exception("Too many redirects")
                     } else if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_PARTIAL) {
@@ -82,6 +87,11 @@ class DownloadManager private constructor(private val context: Context) {
                 }
                 
                 activeConnections[id] = connection
+                
+                Log.d("DownloadManager", "Final URL: $currentUrl")
+                Log.d("DownloadManager", "HTTP Status: ${connection.responseCode}")
+                Log.d("DownloadManager", "Content-Length: ${connection.contentLengthLong}")
+                Log.d("DownloadManager", "Transfer-Encoding: ${connection.getHeaderField("Transfer-Encoding")}")
                 
                 val totalBytes = if (connection.responseCode == HttpURLConnection.HTTP_PARTIAL) {
                     connection.contentLengthLong + outputFile.length()
@@ -147,7 +157,7 @@ class DownloadManager private constructor(private val context: Context) {
                     val actualSha = verifySha256(outputFile)
                     if (actualSha != expectedSha256) {
                         outputFile.delete()
-                        throw Exception("Checksum mismatch. Expected $expectedSha256, got $actualSha")
+                        throw Exception("SHA256 mismatch")
                     }
                 }
 
@@ -156,8 +166,9 @@ class DownloadManager private constructor(private val context: Context) {
                 updateState(id) { 
                     it.copy(progress = 1f, status = DownloadState.Status.COMPLETED) 
                 }
-
+                Log.d("DownloadManager", "Downloaded bytes: ${finalFile.length()}")
             } catch (e: Exception) {
+                Log.e("DownloadManager", "Exception: ${e.message}", e)
                 activeConnections.remove(id)
                 updateState(id) { 
                     it.copy(status = DownloadState.Status.ERROR, error = e.message) 
