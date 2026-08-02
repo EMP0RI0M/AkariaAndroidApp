@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import com.akaria.agent.glass.GlassBox
 import com.akaria.agent.glass.GlassContainer
+import com.akaria.agent.glass.GlassBoxScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 enum class Screen {
@@ -69,91 +70,6 @@ fun AkariaApp(engineViewModel: EngineViewModel = viewModel()) {
                 )
             }
         }
-        }
-    }
-}
-
-@Composable
-fun GlassBoxScope.WelcomeScreen(onNext: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        // Top Section: The Breathing Orb
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            contentAlignment = Alignment.Center
-        ) {
-            GlassBox(
-                modifier = Modifier.size(120.dp),
-                shape = CircleShape,
-                blur = 0.5f,
-                tint = Color(0x66BB86FC),
-                darkness = 0.1f,
-                scale = 0.2f,
-                elevation = 12.dp
-            ) {}
-        }
-
-        // Bottom Section: Typography
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.Start
-        ) {
-            Text(
-                text = "Akaria",
-                color = Color.White,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = (-0.5).sp
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Private AI. Running entirely on your device.",
-                color = Color(0xFFA0A0A0),
-                fontSize = 16.sp
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            val features = listOf(
-                "Local AI",
-                "Private",
-                "Works Offline",
-                "Phone Automation",
-                "Vision & Voice"
-            )
-
-            features.forEach { feature ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("✔", color = Color(0xFF78D890), fontSize = 16.sp)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(feature, color = Color.White, fontSize = 16.sp)
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            Button(
-                onClick = onNext,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFBB86FC),
-                    contentColor = Color(0xFF141414)
-                )
-            ) {
-                Text("Get Started", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            }
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
@@ -300,7 +216,7 @@ fun GlassBoxScope.SetupCompleteScreen(onNext: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(32.dp))
         
-        val checks = listOf("Backend", "Model", "Memory", "Automation", "Vision")
+        val checks: List<String> = listOf("Backend", "Model", "Memory", "Automation", "Vision")
         checks.forEach { check ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("✓", color = Color(0xFF78D890), fontSize = 20.sp, fontWeight = FontWeight.Bold)
