@@ -1,5 +1,7 @@
-package com.akaria.agent
+package com.akaria.agent.ui
 
+import com.akaria.agent.engine.backend.EngineViewModel
+import com.akaria.agent.engine.backend.EngineState
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -48,7 +50,7 @@ fun AkariaApp(engineViewModel: EngineViewModel = viewModel()) {
             label = "ScreenTransition"
         ) { targetScreen ->
             when (targetScreen) {
-                Screen.WELCOME -> WelcomeScreen(
+                Screen.WELCOME -> com.akaria.agent.ui.onboarding.OnboardScreen(
                     onNext = { currentScreen = Screen.HARDWARE_CHECK }
                 )
                 Screen.HARDWARE_CHECK -> HardwareCheckScreen(

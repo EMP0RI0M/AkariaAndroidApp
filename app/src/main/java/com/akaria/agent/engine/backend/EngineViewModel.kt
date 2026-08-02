@@ -1,6 +1,7 @@
-package com.akaria.agent
+package com.akaria.agent.engine.backend
 
 import android.app.Application
+import com.akaria.agent.AkariaEngine
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope

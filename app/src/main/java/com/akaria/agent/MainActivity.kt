@@ -12,6 +12,7 @@ import android.widget.Button
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.akaria.agent.ui.AkariaApp
 import java.io.File
 
 class MainActivity : ComponentActivity() {
