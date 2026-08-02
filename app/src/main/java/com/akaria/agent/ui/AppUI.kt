@@ -73,7 +73,7 @@ fun AkariaApp(engineViewModel: EngineViewModel = viewModel()) {
 @Composable
 fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: () -> Unit) {
     val coreState by engineViewModel.coreState.collectAsState()
-    val downloadProgress by engineViewModel.downloadProgress.collectAsState()
+    val activeDownloads by engineViewModel.activeDownloads.collectAsState()
     val telemetry by engineViewModel.telemetry.collectAsState()
     var isChecking by remember { mutableStateOf(true) }
     val glassScope = this
@@ -117,11 +117,11 @@ fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: 
                 elevation = 8.dp
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("CPU: Snapdragon / Tensor Equivalent", color = Color(0xFFA0A0A0), fontSize = 14.sp)
+                    Text("Storage: ${telemetry.freeStorageMb / 1000} GB Free", color = Color(0xFFA0A0A0), fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("RAM: 12GB (Available)", color = Color(0xFFA0A0A0), fontSize = 14.sp)
+                    Text("RAM: ${telemetry.usedRamMb}/${telemetry.maxRamMb} MB Used", color = Color(0xFFA0A0A0), fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("NPU: Detected", color = Color(0xFFA0A0A0), fontSize = 14.sp)
+                    Text("Battery: ${telemetry.batteryLevel}%", color = Color(0xFFA0A0A0), fontSize = 14.sp)
                 }
             }
 
@@ -152,15 +152,32 @@ fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: 
 
             Spacer(modifier = Modifier.height(48.dp))
 
+            val downloadState = activeDownloads["gemma-4b-q4"]
+
             when {
-                downloadProgress != null -> {
-                    val progress = downloadProgress!!
+                downloadState != null && downloadState.status != com.akaria.agent.engine.models.DownloadState.Status.IDLE -> {
+                    val progress = downloadState.progress
+                    val speed = downloadState.speedBytesPerSec / 1_000_000f
+                    val downloadedMb = downloadState.bytesDownloaded / 1_000_000f
+                    val totalMb = downloadState.totalBytes / 1_000_000f
+
                     Text("Downloading Model: ${(progress * 100).toInt()}%", color = Color.White)
+                    Text(String.format("%.1f MB / %.1f MB - %.1f MB/s", downloadedMb, totalMb, speed), color = Color(0xFFA0A0A0), fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
                     LinearProgressIndicator(
                         progress = progress,
                         modifier = Modifier.fillMaxWidth().height(8.dp),
                         color = Color(0xFFBB86FC)
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        TextButton(onClick = { engineViewModel.pauseModelDownload("gemma-4b-q4") }) {
+                            Text("Pause", color = Color.White)
+                        }
+                        TextButton(onClick = { engineViewModel.cancelModelDownload("gemma-4b-q4") }) {
+                            Text("Cancel", color = Color(0xFFF28B82))
+                        }
+                    }
                 }
                 coreState is CoreState.Ready || coreState is CoreState.WarmingUp -> {
                     Button(
@@ -179,7 +196,7 @@ fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: 
                 }
                 else -> {
                     Button(
-                        onClick = { engineViewModel.downloadTinyModel() },
+                        onClick = { engineViewModel.startModelDownload("gemma-4b-q4") },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
@@ -189,7 +206,7 @@ fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: 
                             contentColor = Color(0xFF141414)
                         )
                     ) {
-                        Text("Download Model", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("Download Model (4.2 GB)", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
