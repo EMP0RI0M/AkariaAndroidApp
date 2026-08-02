@@ -80,4 +80,44 @@ class AkariaAccessibilityService : AccessibilityService() {
         }
         return null
     }
+
+    /**
+     * Captures the current screen context as a compact JSON array of interactive elements
+     * to be fed into the LLM Planner's context window.
+     */
+    fun captureScreenContext(): String {
+        val rootNode = rootInActiveWindow ?: return "[]"
+        val elements = mutableListOf<String>()
+        extractInteractiveNodes(rootNode, elements)
+        return elements.joinToString(prefix = "[\n", postfix = "\n]", separator = ",\n")
+    }
+
+    private fun extractInteractiveNodes(node: AccessibilityNodeInfo, elements: MutableList<String>) {
+        val isInteractive = node.isClickable || node.isScrollable || node.isCheckable
+        val hasText = !node.text.isNullOrBlank() || !node.contentDescription.isNullOrBlank()
+        
+        if (isInteractive || hasText) {
+            val type = when {
+                node.isClickable -> "button/clickable"
+                node.isScrollable -> "scrollable"
+                node.isCheckable -> "checkbox/toggle"
+                else -> "text"
+            }
+            
+            val text = node.text?.toString()?.replace("\"", "\\\"") ?: ""
+            val contentDesc = node.contentDescription?.toString()?.replace("\"", "\\\"") ?: ""
+            val description = if (text.isNotBlank()) text else contentDesc
+            
+            if (description.isNotBlank()) {
+                elements.add("  {\"type\": \"$type\", \"description\": \"$description\"}")
+            }
+        }
+        
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child != null) {
+                extractInteractiveNodes(child, elements)
+            }
+        }
+    }
 }

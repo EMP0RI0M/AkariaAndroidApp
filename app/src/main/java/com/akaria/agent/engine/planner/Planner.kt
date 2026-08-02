@@ -84,9 +84,14 @@ class Planner {
     }
     
     /**
-     * Formats the prompt to send to the LLM.
+     * Formats the prompt to send to the LLM, optionally including the screen context.
      */
-    fun buildPrompt(userMessage: String): String {
-        return "$systemPrompt\n\nUser Request: $userMessage\n\nJSON Output:"
+    fun buildPrompt(userMessage: String, screenContextJson: String? = null): String {
+        var prompt = "$systemPrompt\n\n"
+        if (screenContextJson != null && screenContextJson.isNotBlank()) {
+            prompt += "Current Screen Context:\n$screenContextJson\n\n"
+        }
+        prompt += "User Request: $userMessage\n\nJSON Output:"
+        return prompt
     }
 }
