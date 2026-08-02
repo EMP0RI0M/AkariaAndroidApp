@@ -37,14 +37,14 @@ class AkariaCore private constructor(private val context: Context) {
     val telemetry: StateFlow<TelemetryData> = _telemetry.asStateFlow()
 
     init {
-        bootSequence()
+        reboot()
     }
 
     /**
      * Strict startup lifecycle. 
      * Validates all subsystems before reporting READY.
      */
-    private fun bootSequence() {
+    fun reboot() {
         scope.launch {
             _coreState.value = CoreState.Booting
             

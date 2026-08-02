@@ -45,9 +45,25 @@ class EngineViewModel(application: Application) : AndroidViewModel(application) 
         _downloadProgress.value = 0f
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val modelUrl = URL("https://huggingface.co/ikawrakow/various-2b-sota-gguf/resolve/main/smollm-135m-instruct-add-bos-q8_0.gguf")
-                val connection = modelUrl.openConnection() as HttpURLConnection
-                connection.connect()
+                var connection: HttpURLConnection
+                var redirectUrl = "https://huggingface.co/ikawrakow/various-2b-sota-gguf/resolve/main/smollm-135m-instruct-add-bos-q8_0.gguf"
+                
+                var redirectCount = 0
+                while (true) {
+                    val url = URL(redirectUrl)
+                    connection = url.openConnection() as HttpURLConnection
+                    connection.instanceFollowRedirects = false
+                    connection.connect()
+                    
+                    val status = connection.responseCode
+                    if (status != HttpURLConnection.HTTP_OK && (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == HttpURLConnection.HTTP_SEE_OTHER)) {
+                        redirectUrl = connection.getHeaderField("Location")
+                        redirectCount++
+                        if (redirectCount > 5) throw Exception("Too many redirects")
+                    } else {
+                        break
+                    }
+                }
                 
                 val fileLength = connection.contentLength
                 val outputFile = File(modelsDir, "smollm-135m.gguf")
@@ -74,7 +90,7 @@ class EngineViewModel(application: Application) : AndroidViewModel(application) 
                 _downloadProgress.value = null
                 
                 // Reboot core to detect the new model
-                // In a real app we'd have a reloadModels() function
+                core.reboot()
             } catch (e: Exception) {
                 Log.e("EngineViewModel", "Download failed", e)
                 _downloadProgress.value = null
