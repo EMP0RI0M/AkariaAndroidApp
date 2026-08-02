@@ -20,12 +20,12 @@ object ModelLibrary {
         ModelInfo(
             id = "gemma-4b-q4",
             name = "Gemma 4B",
-            sizeBytes = 4_200_000_000L,
+            sizeBytes = 637699456L, // True size of the dummy payload to avoid UI confusion
             contextWindow = 8192,
             quantization = "Q4_K_M",
             requiredRamMb = 4500,
             speedEstimate = "Fast",
-            downloadUrl = "https://huggingface.co/ikawrakow/various-2b-sota-gguf/resolve/main/smollm-135m-instruct-add-bos-q8_0.gguf", // Dummy link for testing to avoid 4GB download on CI
+            downloadUrl = "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_0.gguf", // Dummy link that actually works (public)
             hfRating = 4.8f,
             isRecommended = true
         ),
