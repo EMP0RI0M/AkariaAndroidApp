@@ -88,26 +88,50 @@ class DownloadManager private constructor(private val context: Context) {
                 
                 activeConnections[id] = connection
                 
-                Log.d("DownloadManager", "Final URL: $currentUrl")
-                Log.d("DownloadManager", "HTTP Status: ${connection.responseCode}")
-                Log.d("DownloadManager", "Content-Length: ${connection.contentLengthLong}")
-                Log.d("DownloadManager", "Transfer-Encoding: ${connection.getHeaderField("Transfer-Encoding")}")
+                val contentType = connection.contentType ?: ""
+                val contentLength = connection.contentLengthLong
+                val transferEncoding = connection.getHeaderField("Transfer-Encoding")
+                
+                Log.d("DownloadManager", "URL=$currentUrl")
+                Log.d("DownloadManager", "Status=${connection.responseCode}")
+                Log.d("DownloadManager", "Content-Type=$contentType")
+                Log.d("DownloadManager", "Content-Length=$contentLength")
+                Log.d("DownloadManager", "Transfer-Encoding=$transferEncoding")
+                Log.d("DownloadManager", "Content-Disposition=${connection.getHeaderField("Content-Disposition")}")
+                Log.d("DownloadManager", "Location=${connection.getHeaderField("Location")}")
+                
+                if (contentType.contains("text/html") || contentType.contains("application/json")) {
+                    val error = connection.inputStream.bufferedReader().readText()
+                    Log.e("DownloadManager", "Error: Received HTML/JSON instead of file contents.")
+                    Log.e("DownloadManager", error.take(500))
+                    throw Exception("Invalid content type: $contentType. Received webpage instead of model.")
+                }
                 
                 val totalBytes = if (connection.responseCode == HttpURLConnection.HTTP_PARTIAL) {
-                    connection.contentLengthLong + outputFile.length()
+                    contentLength + outputFile.length()
                 } else {
-                    connection.contentLengthLong
+                    contentLength
                 }
                 
                 val append = connection.responseCode == HttpURLConnection.HTTP_PARTIAL
                 val outputStream = FileOutputStream(outputFile, append)
                 val inputStream: InputStream = connection.inputStream
                 
+                val header = ByteArray(16)
+                var initialBytesRead = 0
+                if (!append && inputStream.available() > 0 || contentLength != 0L) {
+                    initialBytesRead = inputStream.read(header)
+                    if (initialBytesRead > 0) {
+                        Log.d("DownloadManager", "First 16 bytes: " + header.take(initialBytesRead).joinToString(" ") { "%02X".format(it) })
+                        outputStream.write(header, 0, initialBytesRead)
+                    }
+                }
+                
                 val buffer = ByteArray(8192)
                 var bytesRead: Int
-                var downloaded = if (append) outputFile.length() else 0L
+                var downloaded = if (append) outputFile.length() else initialBytesRead.toLong()
                 var lastTime = System.currentTimeMillis()
-                var bytesSinceLastCalc = 0L
+                var bytesSinceLastCalc = initialBytesRead.toLong()
 
                 // Emit initial downloading state with total bytes
                 updateState(id) {

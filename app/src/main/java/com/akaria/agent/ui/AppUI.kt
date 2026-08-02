@@ -175,18 +175,32 @@ fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: 
                         Spacer(modifier = Modifier.height(4.dp))
                         Text("Fetching metadata & allocating space...", color = Color(0xFFA0A0A0), fontSize = 14.sp)
                     } else {
-                        val displayTotal = if (totalMb > 0f) String.format("%.1f MB", totalMb) else "Unknown Size"
-                        val displaySpeed = if (speed > 0f) String.format("- %.1f MB/s", speed) else ""
-                        Text("Downloading Model: ${(progress * 100).toInt()}%", color = Color.White)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(String.format("%.1f MB / %s %s", downloadedMb, displayTotal, displaySpeed), color = Color(0xFFA0A0A0), fontSize = 14.sp)
+                        val displayTotal = if (totalMb > 0f) String.format("%.1f MB", totalMb) else "Unknown"
+                        val displaySpeed = if (speed > 0f) String.format("• Speed: %.1f MB/s", speed) else ""
+                        
+                        if (totalMb > 0f) {
+                            Text("Downloading Model: ${(progress * 100).toInt()}%", color = Color.White)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(String.format("%.1f MB / %s %s", downloadedMb, displayTotal, displaySpeed), color = Color(0xFFA0A0A0), fontSize = 14.sp)
+                        } else {
+                            Text("Downloading Model...", color = Color.White)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(String.format("Downloaded: %.1f MB %s • Total: %s", downloadedMb, displaySpeed, displayTotal), color = Color(0xFFA0A0A0), fontSize = 14.sp)
+                        }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = progress,
-                        modifier = Modifier.fillMaxWidth().height(8.dp),
-                        color = Color(0xFFBB86FC)
-                    )
+                    if (totalMb > 0f) {
+                        LinearProgressIndicator(
+                            progress = progress,
+                            modifier = Modifier.fillMaxWidth().height(8.dp),
+                            color = Color(0xFFBB86FC)
+                        )
+                    } else {
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth().height(8.dp),
+                            color = Color(0xFFBB86FC)
+                        )
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         TextButton(onClick = { engineViewModel.pauseModelDownload("gemma-4b-q4") }) {
