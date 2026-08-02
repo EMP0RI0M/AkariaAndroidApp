@@ -23,7 +23,7 @@ data class DownloadState(
     val status: Status = Status.IDLE,
     val error: String? = null
 ) {
-    enum class Status { IDLE, DOWNLOADING, PAUSED, VERIFYING, COMPLETED, ERROR }
+    enum class Status { IDLE, FETCHING_METADATA, DOWNLOADING, PAUSED, VERIFYING, COMPLETED, ERROR }
 }
 
 class DownloadManager private constructor(private val context: Context) {
@@ -42,7 +42,7 @@ class DownloadManager private constructor(private val context: Context) {
         val finalFile = File(modelsDir, "$id.gguf")
 
         _downloads.value = _downloads.value.toMutableMap().apply {
-            put(id, DownloadState(id = id, modelName = modelName, status = DownloadState.Status.DOWNLOADING))
+            put(id, DownloadState(id = id, modelName = modelName, status = DownloadState.Status.FETCHING_METADATA))
         }
         
         isPaused.remove(id)
@@ -98,6 +98,15 @@ class DownloadManager private constructor(private val context: Context) {
                 var downloaded = if (append) outputFile.length() else 0L
                 var lastTime = System.currentTimeMillis()
                 var bytesSinceLastCalc = 0L
+
+                // Emit initial downloading state with total bytes
+                updateState(id) {
+                    it.copy(
+                        totalBytes = totalBytes,
+                        bytesDownloaded = downloaded,
+                        status = DownloadState.Status.DOWNLOADING
+                    )
+                }
 
                 while (inputStream.read(buffer).also { bytesRead = it } != -1) {
                     if (isPaused.contains(id)) {
