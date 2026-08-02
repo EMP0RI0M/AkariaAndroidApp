@@ -59,7 +59,7 @@ fun AkariaApp() {
 }
 
 @Composable
-fun WelcomeScreen(onNext: () -> Unit) {
+fun GlassBoxScope.WelcomeScreen(onNext: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -144,7 +144,7 @@ fun WelcomeScreen(onNext: () -> Unit) {
 }
 
 @Composable
-fun HardwareCheckScreen(onNext: () -> Unit) {
+fun GlassBoxScope.HardwareCheckScreen(onNext: () -> Unit) {
     var isChecking by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
@@ -246,7 +246,7 @@ fun HardwareCheckScreen(onNext: () -> Unit) {
 }
 
 @Composable
-fun SetupCompleteScreen(onNext: () -> Unit) {
+fun GlassBoxScope.SetupCompleteScreen(onNext: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -291,7 +291,7 @@ fun SetupCompleteScreen(onNext: () -> Unit) {
 }
 
 @Composable
-fun HomeScreen() {
+fun GlassBoxScope.HomeScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -383,7 +383,7 @@ fun StatusRow(label: String, value: String, valueColor: Color) {
 }
 
 @Composable
-fun ModuleCard(title: String, subtitle: String, modifier: Modifier = Modifier) {
+fun GlassBoxScope.ModuleCard(title: String, subtitle: String, modifier: Modifier = Modifier) {
     GlassBox(
         modifier = modifier.height(100.dp),
         shape = RoundedCornerShape(20.dp),
