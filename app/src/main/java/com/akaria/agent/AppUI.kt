@@ -20,14 +20,20 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import com.akaria.agent.glass.GlassBox
 import com.akaria.agent.glass.GlassContainer
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 enum class Screen {
-    WELCOME, HARDWARE_CHECK, SETUP_COMPLETE, HOME
+    WELCOME, HARDWARE_CHECK, SETUP_COMPLETE, HOME, INFERENCE_TEST
 }
 
 @Composable
-fun AkariaApp() {
+fun AkariaApp(engineViewModel: EngineViewModel = viewModel()) {
     var currentScreen by remember { mutableStateOf(Screen.WELCOME) }
+    
+    // Automatically check for models when app starts
+    LaunchedEffect(Unit) {
+        engineViewModel.checkModels()
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -46,12 +52,19 @@ fun AkariaApp() {
                     onNext = { currentScreen = Screen.HARDWARE_CHECK }
                 )
                 Screen.HARDWARE_CHECK -> HardwareCheckScreen(
+                    engineViewModel = engineViewModel,
                     onNext = { currentScreen = Screen.SETUP_COMPLETE }
                 )
                 Screen.SETUP_COMPLETE -> SetupCompleteScreen(
                     onNext = { currentScreen = Screen.HOME }
                 )
-                Screen.HOME -> HomeScreen()
+                Screen.HOME -> HomeScreen(
+                    onTestModel = { currentScreen = Screen.INFERENCE_TEST }
+                )
+                Screen.INFERENCE_TEST -> InferenceTestScreen(
+                    engineViewModel = engineViewModel,
+                    onBack = { currentScreen = Screen.HOME }
+                )
             }
         }
         }
@@ -144,8 +157,9 @@ fun GlassBoxScope.WelcomeScreen(onNext: () -> Unit) {
 }
 
 @Composable
-fun GlassBoxScope.HardwareCheckScreen(onNext: () -> Unit) {
+fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: () -> Unit) {
     var isChecking by remember { mutableStateOf(true) }
+    val engineState by engineViewModel.engineState.collectAsState()
 
     LaunchedEffect(Unit) {
         delay(2000) // Simulate diagnostics
@@ -221,25 +235,53 @@ fun GlassBoxScope.HardwareCheckScreen(onNext: () -> Unit) {
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            Button(
-                onClick = onNext,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFBB86FC),
-                    contentColor = Color(0xFF141414)
-                )
-            ) {
-                Text("Download Model", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            TextButton(
-                onClick = onNext, // Skip for now
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Import Local GGUF", color = Color(0xFFA0A0A0))
+            when (engineState) {
+                is EngineState.Downloading -> {
+                    val progress = (engineState as EngineState.Downloading).progress
+                    Text("Downloading Model: ${(progress * 100).toInt()}%", color = Color.White)
+                    LinearProgressIndicator(
+                        progress = progress,
+                        modifier = Modifier.fillMaxWidth().height(8.dp),
+                        color = Color(0xFFBB86FC)
+                    )
+                }
+                is EngineState.ModelReady -> {
+                    Button(
+                        onClick = onNext,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(28.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF78D890),
+                            contentColor = Color(0xFF141414)
+                        )
+                    ) {
+                        Text("Model Ready - Continue", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                else -> {
+                    Button(
+                        onClick = { engineViewModel.downloadTinyModel() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(28.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFBB86FC),
+                            contentColor = Color(0xFF141414)
+                        )
+                    ) {
+                        Text("Download Model", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(
+                        onClick = { engineViewModel.checkModels() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Refresh Local GGUF", color = Color(0xFFA0A0A0))
+                    }
+                }
             }
         }
     }
@@ -291,7 +333,7 @@ fun GlassBoxScope.SetupCompleteScreen(onNext: () -> Unit) {
 }
 
 @Composable
-fun GlassBoxScope.HomeScreen() {
+fun GlassBoxScope.HomeScreen(onTestModel: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -354,7 +396,7 @@ fun GlassBoxScope.HomeScreen() {
         Spacer(modifier = Modifier.weight(1f))
 
         Button(
-            onClick = { /* Start overlay */ },
+            onClick = onTestModel,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp),
@@ -364,7 +406,7 @@ fun GlassBoxScope.HomeScreen() {
                 contentColor = Color(0xFF141414)
             )
         ) {
-            Text("Summon Assistant", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("Test Model Inference", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -401,6 +443,101 @@ fun GlassBoxScope.ModuleCard(title: String, subtitle: String, modifier: Modifier
             Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(4.dp))
             Text(subtitle, color = Color(0xFF78D890), fontSize = 14.sp)
+        }
+    }
+}
+
+@Composable
+fun GlassBoxScope.InferenceTestScreen(engineViewModel: EngineViewModel, onBack: () -> Unit) {
+    val engineState by engineViewModel.engineState.collectAsState()
+    var prompt by remember { mutableStateOf("Hello!") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp)
+            .padding(top = 24.dp),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text("Engine Diagnostics", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(32.dp))
+
+        OutlinedTextField(
+            value = prompt,
+            onValueChange = { prompt = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Enter prompt", color = Color(0xFFA0A0A0)) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedBorderColor = Color(0xFFBB86FC),
+                unfocusedBorderColor = Color(0xFF505050)
+            )
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = { engineViewModel.runInference(prompt) },
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            enabled = engineState is EngineState.ModelReady || engineState is EngineState.InferenceComplete,
+            shape = RoundedCornerShape(28.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFBB86FC),
+                contentColor = Color(0xFF141414),
+                disabledContainerColor = Color(0xFF505050)
+            )
+        ) {
+            if (engineState is EngineState.Inferencing) {
+                CircularProgressIndicator(color = Color(0xFF141414), modifier = Modifier.size(24.dp))
+            } else {
+                Text("Generate Response", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Text("Output:", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        GlassBox(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            shape = RoundedCornerShape(16.dp),
+            blur = 0.3f,
+            tint = Color(0x33FFFFFF),
+            darkness = 0.2f,
+            elevation = 8.dp
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                when (engineState) {
+                    is EngineState.InferenceComplete -> {
+                        Text(
+                            text = (engineState as EngineState.InferenceComplete).result,
+                            color = Color.White,
+                            fontSize = 16.sp
+                        )
+                    }
+                    is EngineState.Error -> {
+                        Text(
+                            text = (engineState as EngineState.Error).message,
+                            color = Color(0xFFF28B82),
+                            fontSize = 16.sp
+                        )
+                    }
+                    else -> {
+                        Text("Waiting for input...", color = Color(0xFFA0A0A0), fontSize = 16.sp)
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        TextButton(
+            onClick = onBack,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Back to Hub", color = Color(0xFFA0A0A0))
         }
     }
 }
