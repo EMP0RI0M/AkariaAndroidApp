@@ -110,15 +110,20 @@ class AkariaCore private constructor(private val context: Context) {
 
         val statFs = StatFs(Environment.getDataDirectory().path)
         val freeStorageMb = (statFs.availableBlocksLong * statFs.blockSizeLong) / (1024 * 1024)
+        val totalStorageMb = (statFs.blockCountLong * statFs.blockSizeLong) / (1024 * 1024)
 
-        // Basic RAM (requires ActivityManager, keeping simple here)
-        val runtime = Runtime.getRuntime()
-        val usedMem = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
-        val maxMem = runtime.maxMemory() / (1024 * 1024)
+        // Basic RAM (using ActivityManager)
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val memoryInfo = android.app.ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memoryInfo)
+        
+        val maxMem = memoryInfo.totalMem / (1024 * 1024)
+        val usedMem = (memoryInfo.totalMem - memoryInfo.availMem) / (1024 * 1024)
 
         _telemetry.value = TelemetryData(
             batteryLevel = batteryLevel,
             freeStorageMb = freeStorageMb,
+            totalStorageMb = totalStorageMb,
             usedRamMb = usedMem,
             maxRamMb = maxMem
         )
@@ -148,6 +153,7 @@ sealed class CoreState {
 data class TelemetryData(
     val batteryLevel: Int = -1,
     val freeStorageMb: Long = -1,
+    val totalStorageMb: Long = -1,
     val usedRamMb: Long = -1,
     val maxRamMb: Long = -1,
     val accessibilityEnabled: Boolean = false,

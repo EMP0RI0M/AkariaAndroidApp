@@ -124,9 +124,9 @@ fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: 
                 elevation = 8.dp
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Storage: ${telemetry.freeStorageMb / 1000} GB Free", color = Color(0xFFA0A0A0), fontSize = 14.sp)
+                    Text("Storage: ${telemetry.freeStorageMb / 1000} GB free of ${telemetry.totalStorageMb / 1000} GB", color = Color(0xFFA0A0A0), fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("RAM: ${telemetry.usedRamMb}/${telemetry.maxRamMb} MB Used", color = Color(0xFFA0A0A0), fontSize = 14.sp)
+                    Text("RAM: ${String.format("%.1f", telemetry.usedRamMb / 1024f)} GB / ${String.format("%.1f", telemetry.maxRamMb / 1024f)} GB Used", color = Color(0xFFA0A0A0), fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Battery: ${telemetry.batteryLevel}%", color = Color(0xFFA0A0A0), fontSize = 14.sp)
                 }
@@ -151,9 +151,9 @@ fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: 
                 elevation = 8.dp
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Model: Gemma 4B Q4 (Recommended)", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("Gemma 4B • Q4_K_M • 4.2 GB", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Optimized for your hardware.", color = Color(0xFF78D890), fontSize = 14.sp)
+                    Text("Recommended. Optimized for your hardware.", color = Color(0xFF78D890), fontSize = 14.sp)
                 }
             }
 
@@ -168,8 +168,16 @@ fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: 
                     val downloadedMb = downloadState.bytesDownloaded / 1_000_000f
                     val totalMb = downloadState.totalBytes / 1_000_000f
 
-                    Text("Downloading Model: ${(progress * 100).toInt()}%", color = Color.White)
-                    Text(String.format("%.1f MB / %.1f MB - %.1f MB/s", downloadedMb, totalMb, speed), color = Color(0xFFA0A0A0), fontSize = 14.sp)
+                    val isPreparing = totalMb <= 0f
+                    if (isPreparing) {
+                        Text("Preparing download...", color = Color.White)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Fetching metadata & allocating space...", color = Color(0xFFA0A0A0), fontSize = 14.sp)
+                    } else {
+                        Text("Downloading Model: ${(progress * 100).toInt()}%", color = Color.White)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(String.format("%.1f MB / %.1f MB - %.1f MB/s", downloadedMb, totalMb, speed), color = Color(0xFFA0A0A0), fontSize = 14.sp)
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     LinearProgressIndicator(
                         progress = progress,
