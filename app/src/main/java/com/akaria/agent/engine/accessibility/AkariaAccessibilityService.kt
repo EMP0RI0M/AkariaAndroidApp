@@ -60,6 +60,54 @@ class AkariaAccessibilityService : AccessibilityService() {
     }
 
     /**
+     * Executes a tool call to click an element by its captured hashcode ID.
+     */
+    fun clickNodeById(id: Int): Boolean {
+        val rootNode = rootInActiveWindow ?: return false
+        val node = findNodeById(rootNode, id)
+        return node?.performAction(AccessibilityNodeInfo.ACTION_CLICK) ?: false
+    }
+
+    private fun findNodeById(node: AccessibilityNodeInfo, targetId: Int): AccessibilityNodeInfo? {
+        if (node.hashCode() == targetId) return node
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child != null) {
+                val found = findNodeById(child, targetId)
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+
+    /**
+     * Executes a tool call to scroll the screen.
+     */
+    fun scroll(direction: String): Boolean {
+        // Find first scrollable node
+        val rootNode = rootInActiveWindow ?: return false
+        val scrollable = findFirstScrollable(rootNode) ?: return false
+        
+        return if (direction.lowercase() == "up") {
+            scrollable.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
+        } else {
+            scrollable.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+        }
+    }
+
+    private fun findFirstScrollable(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        if (node.isScrollable) return node
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child != null) {
+                val found = findFirstScrollable(child)
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+
+    /**
      * Recursively searches the node tree for a node matching the description.
      */
     private fun findNodeByTextOrContentDescription(node: AccessibilityNodeInfo, query: String): AccessibilityNodeInfo? {
