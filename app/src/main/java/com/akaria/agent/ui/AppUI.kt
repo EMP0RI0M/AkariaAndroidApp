@@ -24,9 +24,10 @@ import com.akaria.agent.glass.GlassBox
 import com.akaria.agent.glass.GlassContainer
 import com.akaria.agent.glass.GlassBoxScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.os.Build
 
 enum class Screen {
-    WELCOME, HARDWARE_CHECK, SETUP_COMPLETE, HOME, INFERENCE_TEST
+    WELCOME, HARDWARE_CHECK, SETUP_COMPLETE, HOME, INFERENCE_TEST, VOICE
 }
 
 @Composable
@@ -58,12 +59,18 @@ fun AkariaApp(engineViewModel: EngineViewModel = viewModel()) {
                 )
                 Screen.HOME -> HomeScreen(
                     engineViewModel = engineViewModel,
-                    onTestModel = { currentScreen = Screen.INFERENCE_TEST }
+                    onTestModel = { currentScreen = Screen.INFERENCE_TEST },
+                    onVoice = { currentScreen = Screen.VOICE }
                 )
                 Screen.INFERENCE_TEST -> InferenceTestScreen(
                     engineViewModel = engineViewModel,
                     onBack = { currentScreen = Screen.HOME }
                 )
+                Screen.VOICE -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        VoiceScreen(onNext = { currentScreen = Screen.HOME })
+                    }
+                }
             }
         }
         }
@@ -260,7 +267,7 @@ fun GlassBoxScope.SetupCompleteScreen(onNext: () -> Unit) {
 }
 
 @Composable
-fun GlassBoxScope.HomeScreen(engineViewModel: EngineViewModel, onTestModel: () -> Unit) {
+fun GlassBoxScope.HomeScreen(engineViewModel: EngineViewModel, onTestModel: () -> Unit, onVoice: () -> Unit) {
     val coreState by engineViewModel.coreState.collectAsState()
     val telemetry by engineViewModel.telemetry.collectAsState()
     val glassScope = this
@@ -320,7 +327,7 @@ fun GlassBoxScope.HomeScreen(engineViewModel: EngineViewModel, onTestModel: () -
         }
         Spacer(modifier = Modifier.height(16.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            glassScope.ModuleCard(title = "\uD83D\uDDE3\uFE0F Voice", subtitle = "OFF", modifier = Modifier.weight(1f))
+            glassScope.ModuleCard(title = "\uD83D\uDDE3\uFE0F Voice", subtitle = "Ready", modifier = Modifier.weight(1f).clickable { onVoice() })
             glassScope.ModuleCard(title = "\uD83D\uDD04 Memory", subtitle = "ON", modifier = Modifier.weight(1f))
         }
 
