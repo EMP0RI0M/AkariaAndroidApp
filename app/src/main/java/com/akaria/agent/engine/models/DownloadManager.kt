@@ -82,7 +82,16 @@ class DownloadManager private constructor(private val context: Context) {
                     } else if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_PARTIAL) {
                         break
                     } else {
-                        throw Exception("HTTP Error $responseCode")
+                        val errorStream = connection.errorStream
+                        val errorBody = errorStream?.bufferedReader()?.use { it.readText() } ?: "No error body"
+                        Log.e("DownloadManager", "Error body: $errorBody")
+                        
+                        when (responseCode) {
+                            HttpURLConnection.HTTP_UNAUTHORIZED -> throw Exception("Model repository requires authentication (401).")
+                            HttpURLConnection.HTTP_FORBIDDEN -> throw Exception("Access forbidden (403).")
+                            HttpURLConnection.HTTP_NOT_FOUND -> throw Exception("Model file not found (404).")
+                            else -> throw Exception("HTTP Error $responseCode: $errorBody")
+                        }
                     }
                 }
                 
