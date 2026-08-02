@@ -1,7 +1,7 @@
 package com.akaria.agent.ui
 
 import com.akaria.agent.engine.backend.EngineViewModel
-import com.akaria.agent.engine.backend.EngineState
+import com.akaria.agent.engine.CoreState
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -160,8 +160,9 @@ fun GlassBoxScope.WelcomeScreen(onNext: () -> Unit) {
 
 @Composable
 fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: () -> Unit) {
-    var isChecking by remember { mutableStateOf(true) }
-    val engineState by engineViewModel.engineState.collectAsState()
+    val coreState by engineViewModel.coreState.collectAsState()
+    val downloadProgress by engineViewModel.downloadProgress.collectAsState()
+    val telemetry by engineViewModel.telemetry.collectAsState()
 
     LaunchedEffect(Unit) {
         delay(2000) // Simulate diagnostics
@@ -237,9 +238,9 @@ fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: 
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            when (engineState) {
-                is EngineState.Downloading -> {
-                    val progress = (engineState as EngineState.Downloading).progress
+            when {
+                downloadProgress != null -> {
+                    val progress = downloadProgress!!
                     Text("Downloading Model: ${(progress * 100).toInt()}%", color = Color.White)
                     LinearProgressIndicator(
                         progress = progress,
@@ -247,7 +248,7 @@ fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: 
                         color = Color(0xFFBB86FC)
                     )
                 }
-                is EngineState.ModelReady -> {
+                coreState is CoreState.Ready || coreState is CoreState.WarmingUp -> {
                     Button(
                         onClick = onNext,
                         modifier = Modifier
@@ -259,7 +260,7 @@ fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: 
                             contentColor = Color(0xFF141414)
                         )
                     ) {
-                        Text("Model Ready - Continue", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("System Ready - Continue", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 else -> {
@@ -275,13 +276,6 @@ fun GlassBoxScope.HardwareCheckScreen(engineViewModel: EngineViewModel, onNext: 
                         )
                     ) {
                         Text("Download Model", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TextButton(
-                        onClick = { engineViewModel.checkModels() },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Refresh Local GGUF", color = Color(0xFFA0A0A0))
                     }
                 }
             }
@@ -373,10 +367,10 @@ fun GlassBoxScope.HomeScreen(onTestModel: () -> Unit) {
             elevation = 12.dp
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                StatusRow("Engine", "Ready", Color(0xFF78D890))
-                StatusRow("Model", "Gemma 4B", Color.White)
-                StatusRow("Memory", "Healthy", Color(0xFF78D890))
-                StatusRow("Vision", "Ready", Color(0xFF78D890))
+                StatusRow("Engine", coreState.javaClass.simpleName, if (coreState is CoreState.Ready) Color(0xFF78D890) else Color.White)
+                ItemRow("Android Storage", "${telemetry.freeStorageMb} MB Free", telemetry.freeStorageMb > 1000)
+                ItemRow("Memory (RAM)", "${telemetry.usedRamMb}/${telemetry.maxRamMb} MB Used", telemetry.usedRamMb < telemetry.maxRamMb * 0.9)
+                ItemRow("Battery Level", "${telemetry.batteryLevel}%", telemetry.batteryLevel > 15)
             }
         }
 
@@ -451,7 +445,8 @@ fun GlassBoxScope.ModuleCard(title: String, subtitle: String, modifier: Modifier
 
 @Composable
 fun GlassBoxScope.InferenceTestScreen(engineViewModel: EngineViewModel, onBack: () -> Unit) {
-    val engineState by engineViewModel.engineState.collectAsState()
+    val coreState by engineViewModel.coreState.collectAsState()
+    val inferenceResult by engineViewModel.inferenceResult.collectAsState()
     var prompt by remember { mutableStateOf("Hello!") }
 
     Column(
@@ -482,7 +477,7 @@ fun GlassBoxScope.InferenceTestScreen(engineViewModel: EngineViewModel, onBack: 
         Button(
             onClick = { engineViewModel.runInference(prompt) },
             modifier = Modifier.fillMaxWidth().height(56.dp),
-            enabled = engineState is EngineState.ModelReady || engineState is EngineState.InferenceComplete,
+            enabled = coreState is CoreState.Ready,
             shape = RoundedCornerShape(28.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFFBB86FC),
@@ -490,7 +485,7 @@ fun GlassBoxScope.InferenceTestScreen(engineViewModel: EngineViewModel, onBack: 
                 disabledContainerColor = Color(0xFF505050)
             )
         ) {
-            if (engineState is EngineState.Inferencing) {
+            if (coreState is CoreState.Inferencing) {
                 CircularProgressIndicator(color = Color(0xFF141414), modifier = Modifier.size(24.dp))
             } else {
                 Text("Generate Response", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -511,24 +506,24 @@ fun GlassBoxScope.InferenceTestScreen(engineViewModel: EngineViewModel, onBack: 
             elevation = 8.dp
         ) {
             Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                when (engineState) {
-                    is EngineState.InferenceComplete -> {
+                if (inferenceResult != null) {
+                    if (inferenceResult!!.startsWith("Error")) {
                         Text(
-                            text = (engineState as EngineState.InferenceComplete).result,
+                            text = inferenceResult!!,
+                            color = Color(0xFFF28B82),
+                            fontSize = 16.sp
+                        )
+                    } else {
+                        Text(
+                            text = inferenceResult!!,
                             color = Color.White,
                             fontSize = 16.sp
                         )
                     }
-                    is EngineState.Error -> {
-                        Text(
-                            text = (engineState as EngineState.Error).message,
-                            color = Color(0xFFF28B82),
-                            fontSize = 16.sp
-                        )
-                    }
-                    else -> {
-                        Text("Waiting for input...", color = Color(0xFFA0A0A0), fontSize = 16.sp)
-                    }
+                } else if (coreState is CoreState.Inferencing) {
+                    Text("Generating...", color = Color(0xFF78D890), fontSize = 16.sp)
+                } else {
+                    Text("Waiting for input...", color = Color(0xFFA0A0A0), fontSize = 16.sp)
                 }
             }
         }
