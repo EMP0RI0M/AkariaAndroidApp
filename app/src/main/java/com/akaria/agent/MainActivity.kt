@@ -29,21 +29,6 @@ class MainActivity : ComponentActivity() {
             modelsDir.mkdirs()
         }
         
-        val scheduler = EngineScheduler()
-        
-        // Initialize OpenPhone Architecture (App Map)
-        val appMap = AppMap().apply {
-            addNode(AppNode("home_screen", "The Android Home Screen"))
-            addNode(AppNode("settings_main", "The main settings menu"))
-            addNode(AppNode("settings_bluetooth", "The Bluetooth settings page"))
-            
-            // Add a known deterministic macro path
-            addEdge(MacroEdge("home_screen", "settings_main", "tap", 100f, 200f))
-            addEdge(MacroEdge("settings_main", "settings_bluetooth", "tap", 150f, 300f))
-        }
-        
-        val planner = Planner(appMap, scheduler)
-
         // Set up the modern Compose UI
         setContent {
             AkariaApp()
